@@ -260,19 +260,36 @@ def report_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 # ==================== 条件路由 ====================
 
+PHASE_ORDER = ["perception", "modeling", "reasoning", "decision", "report"]
+
 def router(state: Dict[str, Any]) -> str:
-    """根据当前阶段决定下一步"""
+    """根据当前阶段和重试次数决定下一步"""
     current = state.get("current_phase")
-    
-    # 错误处理
-    if state.get("error"):
-        return "error"
     
     # 完成状态
     if current == "completed":
         return "completed"
     
-    # 正常流转: 返回current_phase的值(即节点函数设置的下一阶段)
+    # 错误状态：检查是否超过重试次数
+    if current == "error":
+        # 检查是否所有阶段都重试超限，是则结束
+        return "completed"
+    
+    # 检查该阶段的重试次数
+    phase = current
+    if phase in PHASE_ORDER:
+        retry_key = f"{phase}_retry"
+        retry_count = state.get(retry_key, 0)
+        if retry_count >= MAX_RETRIES:
+            # 超过重试限制，前进到下一阶段
+            idx = PHASE_ORDER.index(phase)
+            if idx < len(PHASE_ORDER) - 1:
+                logging.warning(f"{phase} 重试 {retry_count} 次仍失败，前进到 {PHASE_ORDER[idx + 1]}")
+                return PHASE_ORDER[idx + 1]
+            else:
+                return "completed"
+    
+    # 正常流转
     return current
 
 def get_fallback_map():
