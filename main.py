@@ -181,12 +181,15 @@ def perception_node(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_template(PERCEPTION_PROMPT)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"]})
-        # 尝试解析JSON
+        # 尝试解析JSON，失败则使用兜底数据
+        result = None
         try:
             result = json.loads(result_text)
-        except:
-            result = {"market_overview": result_text[:500], "raw_output": result_text}
-        return {**state, "perception_data": result, "current_phase": "modeling", "perception_retry": 0}
+        except Exception:
+            pass
+        if result is None:
+            result = {"market_overview": result_text[:500] if result_text else "数据获取失败", "raw_output": result_text}
+        return {**state, "perception_data": result, "current_phase": "modeling", "perception_retry": 0, "error": None}
     except Exception as e:
         logging.error(f"感知阶段错误: {e}")
         return {**state, "error": f"感知阶段出错: {e}", "current_phase": "perception", "perception_retry": retry_count + 1}
@@ -204,12 +207,15 @@ def modeling_node(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_template(MODELING_PROMPT)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "perception_data": json.dumps(state["perception_data"], ensure_ascii=False)})
-        # 尝试解析JSON
+        # 尝试解析JSON，失败则使用兜底数据
+        result = None
         try:
             result = json.loads(result_text)
-        except:
-            result = {"market_state": result_text[:200], "raw_output": result_text}
-        return {**state, "world_model": result, "current_phase": "reasoning", "modeling_retry": 0}
+        except Exception:
+            pass
+        if result is None:
+            result = {"market_state": result_text[:500] if result_text else "模型构建失败", "raw_output": result_text}
+        return {**state, "world_model": result, "current_phase": "reasoning", "modeling_retry": 0, "error": None}
     except Exception as e:
         logging.error(f"建模阶段错误: {e}")
         return {**state, "error": f"建模阶段出错: {e}", "current_phase": "modeling", "modeling_retry": retry_count + 1}
@@ -227,11 +233,15 @@ def reasoning_node(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_template(REASONING_PROMPT)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False)})
+        # 尝试解析JSON，失败则使用兜底数据
+        result = None
         try:
             result = json.loads(result_text)
-        except:
-            result = {"plans": result_text[:500], "raw_output": result_text}
-        return {**state, "reasoning_plans": result, "current_phase": "decision", "reasoning_retry": 0}
+        except Exception:
+            pass
+        if result is None:
+            result = {"plans": result_text[:500] if result_text else "方案生成失败", "raw_output": result_text}
+        return {**state, "reasoning_plans": result, "current_phase": "decision", "reasoning_retry": 0, "error": None}
     except Exception as e:
         logging.error(f"推理阶段错误: {e}")
         return {**state, "error": f"推理阶段出错: {e}", "current_phase": "reasoning", "reasoning_retry": retry_count + 1}
@@ -249,11 +259,15 @@ def decision_node(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_template(DECISION_PROMPT)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False), "reasoning_plans": json.dumps(state["reasoning_plans"], ensure_ascii=False)})
+        # 尝试解析JSON，失败则使用兜底数据
+        result = None
         try:
             result = json.loads(result_text)
-        except:
-            result = {"decision": result_text[:500], "raw_output": result_text}
-        return {**state, "selected_plan": result, "current_phase": "report", "decision_retry": 0}
+        except Exception:
+            pass
+        if result is None:
+            result = {"decision": result_text[:500] if result_text else "决策生成失败", "raw_output": result_text}
+        return {**state, "selected_plan": result, "current_phase": "report", "decision_retry": 0, "error": None}
     except Exception as e:
         logging.error(f"决策阶段错误: {e}")
         return {**state, "error": f"决策阶段出错: {e}", "current_phase": "decision", "decision_retry": retry_count + 1}
