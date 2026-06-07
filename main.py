@@ -295,10 +295,10 @@ def router(state: Dict[str, Any]) -> str:
 def get_fallback_map():
     """获取各阶段的条件边映射"""
     return {
-        "perception": {"modeling": "modeling", "perception": "perception", "error": "perception", "END": END},
-        "modeling": {"reasoning": "reasoning", "modeling": "modeling", "perception": "perception", "error": "modeling", "END": END},
-        "reasoning": {"decision": "decision", "reasoning": "reasoning", "modeling": "modeling", "error": "reasoning", "END": END},
-        "decision": {"report": "report", "decision": "decision", "reasoning": "reasoning", "error": "decision", "END": END},
+        "perception": {"modeling": "modeling", "perception": "perception", "error": "perception", "completed": END, "END": END},
+        "modeling": {"reasoning": "reasoning", "modeling": "modeling", "perception": "perception", "error": "modeling", "completed": END, "END": END},
+        "reasoning": {"decision": "decision", "reasoning": "reasoning", "modeling": "modeling", "error": "reasoning", "completed": END, "END": END},
+        "decision": {"report": "report", "decision": "decision", "reasoning": "reasoning", "error": "decision", "completed": END, "END": END},
         "report": {"completed": END, "report": "report", "decision": "decision", "error": "report", "END": END}
     }
 
