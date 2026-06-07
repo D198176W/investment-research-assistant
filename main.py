@@ -179,8 +179,13 @@ def perception_node(state: Dict[str, Any]) -> Dict[str, Any]:
     try:
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
         prompt = ChatPromptTemplate.from_template(PERCEPTION_PROMPT)
-        chain = prompt | llm | JsonOutputParser()
-        result = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"]})
+        chain = prompt | llm | StrOutputParser()
+        result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"]})
+        # 尝试解析JSON
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {"market_overview": result_text[:500], "raw_output": result_text}
         return {**state, "perception_data": result, "current_phase": "modeling", "perception_retry": 0}
     except Exception as e:
         logging.error(f"感知阶段错误: {e}")
@@ -197,8 +202,13 @@ def modeling_node(state: Dict[str, Any]) -> Dict[str, Any]:
             return {**state, "error": "缺少感知数据", "current_phase": "perception", "modeling_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
         prompt = ChatPromptTemplate.from_template(MODELING_PROMPT)
-        chain = prompt | llm | JsonOutputParser()
-        result = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "perception_data": json.dumps(state["perception_data"], ensure_ascii=False)})
+        chain = prompt | llm | StrOutputParser()
+        result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "perception_data": json.dumps(state["perception_data"], ensure_ascii=False)})
+        # 尝试解析JSON
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {"market_state": result_text[:200], "raw_output": result_text}
         return {**state, "world_model": result, "current_phase": "reasoning", "modeling_retry": 0}
     except Exception as e:
         logging.error(f"建模阶段错误: {e}")
@@ -215,8 +225,12 @@ def reasoning_node(state: Dict[str, Any]) -> Dict[str, Any]:
             return {**state, "error": "缺少世界模型", "current_phase": "modeling", "reasoning_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
         prompt = ChatPromptTemplate.from_template(REASONING_PROMPT)
-        chain = prompt | llm | JsonOutputParser()
-        result = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False)})
+        chain = prompt | llm | StrOutputParser()
+        result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False)})
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {"plans": result_text[:500], "raw_output": result_text}
         return {**state, "reasoning_plans": result, "current_phase": "decision", "reasoning_retry": 0}
     except Exception as e:
         logging.error(f"推理阶段错误: {e}")
@@ -233,8 +247,12 @@ def decision_node(state: Dict[str, Any]) -> Dict[str, Any]:
             return {**state, "error": "缺少候选方案", "current_phase": "reasoning", "decision_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
         prompt = ChatPromptTemplate.from_template(DECISION_PROMPT)
-        chain = prompt | llm | JsonOutputParser()
-        result = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False), "reasoning_plans": json.dumps(state["reasoning_plans"], ensure_ascii=False)})
+        chain = prompt | llm | StrOutputParser()
+        result_text = chain.invoke({"research_topic": state["research_topic"], "industry_focus": state["industry_focus"], "time_horizon": state["time_horizon"], "world_model": json.dumps(state["world_model"], ensure_ascii=False), "reasoning_plans": json.dumps(state["reasoning_plans"], ensure_ascii=False)})
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {"decision": result_text[:500], "raw_output": result_text}
         return {**state, "selected_plan": result, "current_phase": "report", "decision_retry": 0}
     except Exception as e:
         logging.error(f"决策阶段错误: {e}")
