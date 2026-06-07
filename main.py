@@ -231,14 +231,12 @@ def modeling_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not state.get("api_key"):
             return {**state, "error": "API密钥未配置，请在侧边栏输入或设置环境变量 DASHSCOPE_API_KEY", "current_phase": "error", "modeling_retry": MAX_RETRIES}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
-        # 使用字符串拼接避免JSON花括号与模板变量冲突
+        # 使用字符串替换避免JSON花括号与.format()冲突
         perception_json = json.dumps(state["perception_data"], ensure_ascii=False)
-        prompt_text = MODELING_PROMPT_TEMPLATE.format(
-            research_topic=state["research_topic"],
-            industry_focus=state["industry_focus"],
-            time_horizon=state["time_horizon"],
-            perception_data=perception_json
-        )
+        prompt_text = MODELING_PROMPT_TEMPLATE.replace("{research_topic}", state["research_topic"])
+        prompt_text = prompt_text.replace("{industry_focus}", state["industry_focus"])
+        prompt_text = prompt_text.replace("{time_horizon}", state["time_horizon"])
+        prompt_text = prompt_text.replace("{perception_data}", perception_json)
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({})
@@ -268,14 +266,12 @@ def reasoning_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not state.get("world_model"):
             return {**state, "error": "缺少世界模型", "current_phase": "modeling", "reasoning_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
-        # 使用字符串拼接避免JSON花括号与模板变量冲突
+        # 使用字符串替换避免JSON花括号与.format()冲突
         world_model_json = json.dumps(state["world_model"], ensure_ascii=False)
-        prompt_text = REASONING_PROMPT_TEMPLATE.format(
-            research_topic=state["research_topic"],
-            industry_focus=state["industry_focus"],
-            time_horizon=state["time_horizon"],
-            world_model=world_model_json
-        )
+        prompt_text = REASONING_PROMPT_TEMPLATE.replace("{research_topic}", state["research_topic"])
+        prompt_text = prompt_text.replace("{industry_focus}", state["industry_focus"])
+        prompt_text = prompt_text.replace("{time_horizon}", state["time_horizon"])
+        prompt_text = prompt_text.replace("{world_model}", world_model_json)
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({})
@@ -302,16 +298,14 @@ def decision_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not state.get("reasoning_plans"):
             return {**state, "error": "缺少候选方案", "current_phase": "reasoning", "decision_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
-        # 使用字符串拼接避免JSON花括号与模板变量冲突
+        # 使用字符串替换避免JSON花括号与.format()冲突
         world_model_json = json.dumps(state["world_model"], ensure_ascii=False)
         reasoning_plans_json = json.dumps(state["reasoning_plans"], ensure_ascii=False)
-        prompt_text = DECISION_PROMPT_TEMPLATE.format(
-            research_topic=state["research_topic"],
-            industry_focus=state["industry_focus"],
-            time_horizon=state["time_horizon"],
-            world_model=world_model_json,
-            reasoning_plans=reasoning_plans_json
-        )
+        prompt_text = DECISION_PROMPT_TEMPLATE.replace("{research_topic}", state["research_topic"])
+        prompt_text = prompt_text.replace("{industry_focus}", state["industry_focus"])
+        prompt_text = prompt_text.replace("{time_horizon}", state["time_horizon"])
+        prompt_text = prompt_text.replace("{world_model}", world_model_json)
+        prompt_text = prompt_text.replace("{reasoning_plans}", reasoning_plans_json)
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm | StrOutputParser()
         result_text = chain.invoke({})
@@ -338,18 +332,16 @@ def report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not state.get("selected_plan"):
             return {**state, "error": "缺少选定方案", "current_phase": "decision", "report_retry": retry_count + 1}
         llm = Tongyi(model_name=state["model_name"], dashscope_api_key=state["api_key"], base_url=state["api_url"], model_kwargs={})
-        # 使用字符串拼接避免JSON花括号与模板变量冲突
+        # 使用字符串替换避免JSON花括号与.format()冲突
         perception_json = json.dumps(state["perception_data"], ensure_ascii=False)
         world_model_json = json.dumps(state["world_model"], ensure_ascii=False)
         selected_plan_json = json.dumps(state["selected_plan"], ensure_ascii=False)
-        prompt_text = REPORT_PROMPT_TEMPLATE.format(
-            research_topic=state["research_topic"],
-            industry_focus=state["industry_focus"],
-            time_horizon=state["time_horizon"],
-            perception_data=perception_json,
-            world_model=world_model_json,
-            selected_plan=selected_plan_json
-        )
+        prompt_text = REPORT_PROMPT_TEMPLATE.replace("{research_topic}", state["research_topic"])
+        prompt_text = prompt_text.replace("{industry_focus}", state["industry_focus"])
+        prompt_text = prompt_text.replace("{time_horizon}", state["time_horizon"])
+        prompt_text = prompt_text.replace("{perception_data}", perception_json)
+        prompt_text = prompt_text.replace("{world_model}", world_model_json)
+        prompt_text = prompt_text.replace("{selected_plan}", selected_plan_json)
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm | StrOutputParser()
         result = chain.invoke({})
